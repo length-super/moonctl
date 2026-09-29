@@ -101,6 +101,33 @@ pub fn Model::state_id(self : Model, index : Int) -> String? {
 }
 
 ///|
+/// Return state IDs that cannot be reached from the initial state, in the
+/// model's input order. This helps spot states that cannot affect a verdict.
+pub fn Model::unreachable_states(self : Model) -> Array[String] {
+  let seen = Array::make(self.states.length(), false)
+  let queue = [self.initial]
+  seen[self.initial] = true
+  let mut head = 0
+  while head < queue.length() {
+    let current = queue[head]
+    head += 1
+    for edge in self.outgoing[current] {
+      if !seen[edge.to] {
+        seen[edge.to] = true
+        queue.push(edge.to)
+      }
+    }
+  }
+  let missing : Array[String] = []
+  for i in 0..<self.states.length() {
+    if !seen[i] {
+      missing.push(self.states[i].id)
+    }
+  }
+  missing
+}
+
+///|
 pub fn Model::has_label(self : Model, index : Int, label : String) -> Bool {
   match self.states.get(index) {
     Some(state) => state.labels.contains(label)

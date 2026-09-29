@@ -88,6 +88,7 @@ pub fn Model::new(Array[State], Array[Edge], initial~ : Int) -> Result[Self, Mod
 pub fn Model::state_count(Self) -> Int
 pub fn Model::state_id(Self, Int) -> String?
 pub fn Model::successors(Self, Int) -> Array[Edge]
+pub fn Model::unreachable_states(Self) -> Array[String]
 
 pub(all) enum ModelError {
   EmptyStates

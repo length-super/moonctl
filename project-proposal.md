@@ -12,7 +12,7 @@
 
 MoonBit 已有状态建模与形式化基础：[MoonBDD](https://mooncakes.io/docs/oyjh0381/moonbdd) 处理符号布尔空间，[MoonPetri](https://mooncakes.io/docs/okMambaOut/moonpetri%400.1.0) 处理 Petri 网可达性与死锁，[moon prove](https://docs.moonbitlang.com/en/latest/language/verification.html) 验证程序契约。但是工作流、协议、Agent 工具链的开发者还缺一层方便复用的时序性质表达：例如“每种可能执行路径始终不重复扣款”（AG）、“存在路径最终恢复”（EF）、“任何请求最终有响应”（AF）。普通单路径单元测试很难覆盖分支与循环。
 
-MoonCTL 让调用方提供有限的带标签状态图，用 CTL 公式检查所有路径，并为部分常见性质输出可重放的最短有限路径或循环路径。它检查开发者建模的状态系统，不声称直接验证任意 MoonBit 并发程序。
+MoonCTL 让调用方提供有限的带标签状态图，或从转换函数在预算内探索完整的可达图，用 CTL 公式检查所有路径，并为部分常见性质输出可重放的最短有限路径或循环路径。预算不足只返回“不完整”，不生成可误用的检查模型。它检查开发者建模的状态系统，不声称直接验证任意 MoonBit 并发程序。
 
 ## 4. 竞争分析与禁止撞车判断
 
@@ -50,7 +50,7 @@ MoonCTL 让调用方提供有限的带标签状态图，用 CTL 公式检查所�
 
 ```mermaid
 flowchart LR
-  A[MoonBit 应用模型 / 显式状态图] --> B[状态图结构校验]
+  A[显式图 / 状态 ID / 转换函数] --> B[完整性与预算检查]
   B --> C[CTL AST / 公式解析]
   C --> D[固定点求值器]
   D --> E[性质结果]
@@ -61,17 +61,19 @@ flowchart LR
 
 ### Modules
 
-- `model.mbt`：状态、转换、标签、初态与索引校验；构造时补齐死端自环和前驱索引。模型行为的完整性由建模者保证。
+- `model.mbt` 与 `named_model.mbt`：状态、转换、标签、初态与索引/ID 校验；构造时补齐死端自环和前驱索引。
+- `explore.mbt`：按广度优先探索可达状态；状态或转移预算耗尽时只返回不完整结果，不返回可检查模型。
 - `formula.mbt`：CTL AST、文本解析和运算符优先级。
 - `check.mbt`：利用前驱索引传播布尔状态集固定点；为 `EX/AX/EF/AF/EG/AG/EU/AU` 的可解释结果提取有限或循环路径。
 - `report_json.mbt`：稳定版本号的 JSON 报告，供 CI 和其他工具读取。
 - `json_model.mbt`：小型 JSON 图的类型校验与装载。
 - `cmd/main/`：读取图与公式，输出人可读或 JSON 报告；CLI 是 native 包装层，核心库可用于 wasm/js/native。
-- `examples/`：有竞争条件的扣款工作流与修复版。
+- `examples/`：有竞争条件的扣款工作流、修复版及转换函数探索示例。
+- `oracle_test.mbt`：与固定点求值独立的路径枚举参考语义，以及路径重放测试。
 
 ### Data Flow
 
-模型定义 → 图/标签校验 → 解析公式 → 子公式自底向上求满足状态集 → 判断初态 → 提取证据 → 输出报告。MVP 只接受完整的有限图；有界按需探索作为后续扩展，以免把“未探索”误报为“性质成立”。
+显式图或预算内探索 → 图/标签校验 → 解析公式 → 子公式自底向上求满足状态集 → 判断初态 → 提取证据 → 输出报告。探索未完成时流程终止并报告预算原因，不进入性质求值。
 
 ### API Design（已实现接口）
 
@@ -82,7 +84,7 @@ let report = @moonctl.check(model, formula)
 // report.holds(), report.satisfies_at(0), report.trace(), report.to_json()
 ```
 
-模块名为 `yelfs/moonctl`，核心 API 在根包。解析失败与无效图有显式错误类型。图是否覆盖实际系统的全部相关行为无法自动验证；当前版本也尚未设置状态规模上限。
+模块名为 `yelfs/moonctl`，核心 API 在根包。解析失败与无效图有显式错误类型。图是否覆盖实际系统的全部相关行为仍取决于建模者；按需探索有显式状态与转移预算，手工构图没有内置硬上限。
 
 ## 6. MVP 范围
 
@@ -90,7 +92,7 @@ let report = @moonctl.check(model, formula)
 
 - 核心：显式有限图、`! / & / | / EX / AX / EF / AF / EG / AG / E[U] / A[U]` CTL 求值；明确死端状态自环语义。
 - Demo：同一业务模型先生成违反 `AG !double_charge` 的路径，再修复转移并通过检查。
-- Tests：算子真值、循环、死端、自环、最短证据和非法输入；至少 wasm-gc 与 native 目标验证。
+- Tests：算子真值、循环、死端、自环、最短证据和非法输入；另用独立路径语义对照小图，重放每条证据；至少 wasm-gc 与 native 目标验证。
 - Documentation：README、API 用例、语义边界、竞品差异和三分钟演示脚本。
 
 不把任意生产程序自动抽象成模型，不包装已有 BDD/Petri 的核心算法。后续可实现 MoonPetri 图适配器、WASM 交互式状态图和 LTL 扩展。

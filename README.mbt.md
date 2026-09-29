@@ -63,6 +63,50 @@ assert_true(report.holds())
 
 在调用方 `moon.pkg` 中导入 `"yelfs/moonctl" @moonctl`。`Model::new` 验证非空状态、初始索引、状态 ID 唯一性和转移索引。`parse` 与 `load_model_json` 分别以 `ParseError` 和 `ModelJsonError` 报告输入问题。`Report` 提供 `holds()`、`state_count()`、`satisfying_count()`、`satisfies_at(index)`、`trace()`、`trace_role()`、`loop_start()` 和 `to_json()`。
 
+### 用状态 ID 构图
+
+不必手工维护数字索引。`Model::from_named` 接受同样的状态列表和 `NamedEdge`，用状态 ID 指定初态及转移；未知或重复的 ID 会返回错误。
+
+```mbt nocheck
+///|
+let states : Array[@moonctl.State] = [
+  { id: "queued", labels: [], },
+  { id: "done", labels: ["completed"], },
+]
+
+///|
+let edges : Array[@moonctl.NamedEdge] = [
+  { from: "queued", to: "done", action: "finish", },
+]
+
+///|
+let model = @moonctl.Model::from_named(states, edges, "queued")
+```
+
+### 从转换函数探索
+
+`explore` 从初态按广度优先调用转换函数，只纳入可达状态。调用方必须给出 `max_states` 和 `max_edges`；前者含初态，后者统计显式转移，不统计死端的隐式自环。刚好达到预算仍可能完成；只有还需发现新状态或转移时才返回 `Incomplete`。状态 ID 再次出现时，其标签集合必须一致。`Incomplete` **不含 `Model`**，因此不能把未探索的行为当成性质通过。
+
+```mbt nocheck
+let result = @moonctl.explore(
+  initial,
+  state => transitions_from(state),
+  max_states=1000,
+  max_edges=5000,
+)
+match result {
+  Ok(Complete(model)) => {
+    let report = @moonctl.check(model, @moonctl.parse("AG !double_charge"))
+    println("holds=\{report.holds()}")
+  }
+  Ok(Incomplete(limit, states, edges)) =>
+    println("incomplete: \{Repr(limit)}, \{states} states, \{edges} edges")
+  Err(error) => println("invalid exploration: \{Repr(error)}")
+}
+```
+
+完整可运行版本：`moon run --target wasm-gc examples/explore`。转换回调必须对同一状态 ID 稳定地返回该状态的全部可能转移；若历史会改变后续行为，应把相关历史纳入状态 ID。预算约束的是 MoonCTL 保存的图，不限制回调内部自行分配的内存。
+
 ## JSON 模型格式
 
 `examples/buggy.json` 展示完整格式：
@@ -105,13 +149,14 @@ assert_true(report.holds())
 moon check --target all --deny-warn
 moon test --target wasm-gc --deny-warn
 moon test --target native --deny-warn
+moon run --target wasm-gc examples/explore
 ```
 
-三分钟演示脚本见 [docs/demo.md](docs/demo.md)。调研依据与竞品比较见 [mooncake-ecosystem-analysis.md](mooncake-ecosystem-analysis.md)、[github-ecosystem-analysis.md](github-ecosystem-analysis.md) 和 [project-proposal.md](project-proposal.md)。
+测试中另有一个独立参考求值器：它在小图上逐条枚举简单路径并识别循环，与正式求值器的前驱固定点算法分开；测试对照每个状态的真值，并重放所有生成的有限和循环路径。三分钟演示脚本见 [docs/demo.md](docs/demo.md)。调研依据与竞品比较见 [mooncake-ecosystem-analysis.md](mooncake-ecosystem-analysis.md)、[github-ecosystem-analysis.md](github-ecosystem-analysis.md) 和 [project-proposal.md](project-proposal.md)。
 
 ## 当前边界
 
-- 使用显式有限图，单个时序子公式的固定点求值按状态和转移数线性增长；MVP 尚无符号状态压缩或状态规模上限。
+- 使用显式有限图，单个时序子公式的固定点求值按状态和转移数线性增长；按需探索有明确预算，手工构图仍由调用方控制规模；尚无符号状态压缩。
 - 模型是否忠实于业务系统由建模者负责；`PASS` 只适用于已给出的图与标签。
 - CLI 使用 native 后端；核心库已按 MoonBit 的 wasm、wasm-gc、js、native 目标检查。
 

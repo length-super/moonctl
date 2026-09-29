@@ -1,0 +1,5 @@
+import {
+  "yelfs/moonctl",
+}
+
+pkgtype(kind: "executable")

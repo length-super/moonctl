@@ -8,6 +8,8 @@ import {
 // Values
 pub fn check(Model, Formula) -> Report
 
+pub fn explore(State, (State) -> Array[Transition], max_states~ : Int, max_edges~ : Int) -> Result[Exploration, ExploreError]
+
 pub fn load_model_json(String) -> Model raise ModelJsonError
 
 pub fn parse(String) -> Formula raise ParseError
@@ -37,6 +39,24 @@ pub(all) struct Edge {
 } derive(@debug.Debug)
 pub fn Edge::to_repr(Self) -> @debug.Repr
 
+pub enum Exploration {
+  Complete(Model)
+  Incomplete(ExploreLimit, Int, Int)
+}
+
+pub(all) enum ExploreError {
+  InvalidBudget(Int, Int)
+  ConflictingState(String)
+  InvalidExploredGraph(ModelError)
+} derive(@debug.Debug)
+pub fn ExploreError::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ExploreLimit {
+  StateBudgetReached
+  EdgeBudgetReached
+} derive(@debug.Debug)
+pub fn ExploreLimit::to_repr(Self) -> @debug.Repr
+
 pub enum Formula {
   True
   False
@@ -61,6 +81,7 @@ pub struct Model {
   incoming : Array[Array[Int]]
   initial : Int
 }
+pub fn Model::from_named(Array[State], Array[NamedEdge], String) -> Result[Self, NamedModelError]
 pub fn Model::has_label(Self, Int, String) -> Bool
 pub fn Model::initial(Self) -> Int
 pub fn Model::new(Array[State], Array[Edge], initial~ : Int) -> Result[Self, ModelError]
@@ -75,6 +96,20 @@ pub(all) enum ModelError {
   InvalidEdge(Int, Int)
 } derive(@debug.Debug)
 pub fn ModelError::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NamedEdge {
+  from : String
+  to : String
+  action : String
+} derive(@debug.Debug)
+pub fn NamedEdge::to_repr(Self) -> @debug.Repr
+
+pub(all) enum NamedModelError {
+  DuplicateName(String)
+  UnknownState(String)
+  InvalidModel(ModelError)
+} derive(@debug.Debug)
+pub fn NamedModelError::to_repr(Self) -> @debug.Repr
 
 pub struct Report {
   holds : Bool
@@ -105,6 +140,12 @@ pub(all) struct TraceStep {
   via : String?
 } derive(@debug.Debug)
 pub fn TraceStep::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Transition {
+  to : State
+  action : String
+} derive(@debug.Debug)
+pub fn Transition::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

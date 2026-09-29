@@ -172,4 +172,4 @@ moon run --target wasm-gc examples/explore
 
 MoonCTL 是独立实现的 CTL 显式状态模型检查库。仓库中的支付流程模型、测试图和演示脚本为本项目编写；生态调研中提及的 MoonBDD、MoonPetri 和 `moon prove` 是相邻项目，并非本项目的代码来源。源码以 [Apache-2.0](LICENSE) 发布。
 
-项目维护者：[length-super](https://github.com/length-super)。反馈问题或提出改进建议时，请附上最小状态图、CTL 公式、实际输出和预期结果。当前公开 API 以 `pkg.generated.mbti` 为准。
+项目维护者：[length-super](https://github.com/length-super)。在 [GitHub Issues](https://github.com/length-super/moonctl/issues) 反馈问题或提出改进建议时，请附上最小状态图、CTL 公式、实际输出和预期结果。当前公开 API 以 `pkg.generated.mbti` 为准。

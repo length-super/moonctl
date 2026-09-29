@@ -8,6 +8,7 @@ MoonCTL 是一个用 MoonBit 编写的 CTL（计算树逻辑）有限状态模�
 | --- | --- |
 | CTL 检查 | 支持 `EX`、`AX`、`EF`、`AF`、`EG`、`AG`、`E[p U q]`、`A[p U q]` |
 | 结果解释 | 对支持的公式返回有限路径或带循环入口的路径；也可输出 JSON |
+| 图形导出 | 将模型导出为 Graphviz DOT，并标红见证或反例路径 |
 | 建模方式 | 从 JSON、状态 ID 与转移，或带预算的转换函数构建有限图 |
 | 运行目标 | 核心库通过 wasm、wasm-gc、js、native 检查；命令行示例使用 native |
 
@@ -46,6 +47,14 @@ moon run --target native cmd/main -- --suite examples/buggy.json examples/paymen
 ```
 
 命令会逐项输出 `PASS` / `FAIL` 和汇总；全部通过时退出码为 0，任一性质失败时为 1，文件或公式错误时为 2。
+
+需要展示状态图时，可导出 Graphviz DOT（此命令本身不需要安装 Graphviz）：
+
+```sh
+moon run --target native cmd/main -- --dot examples/buggy.json 'AG !double_charge' > buggy.dot
+```
+
+初始状态画成双圈，检查结果给出的见证或反例转移标成红色。库用户也可以调用 `model.to_dot()` 或 `model.to_dot_with_trace(report)`。
 
 机器可读输出使用 `--json`：
 

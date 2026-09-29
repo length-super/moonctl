@@ -1,0 +1,4 @@
+# Mutual exclusion: no state owns the lock twice
+AG !both_hold
+# Every held lock must eventually become free on every path
+AG (!(a_holds | b_holds) | AF free)

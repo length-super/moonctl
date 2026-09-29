@@ -26,3 +26,5 @@ jobs:
         run: moon test --target wasm-gc --deny-warn
       - name: Test native
         run: moon test --target native --deny-warn
+      - name: Verify complete scenarios
+        run: bash scripts/check_scenarios.sh

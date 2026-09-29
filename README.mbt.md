@@ -177,7 +177,7 @@ moon test --target native --deny-warn
 moon run --target wasm-gc examples/explore
 ```
 
-测试中另有一个独立参考求值器：它在小图上逐条枚举简单路径并识别循环，与正式求值器的前驱固定点算法分开；测试对照每个状态的真值，并重放所有生成的有限和循环路径。三分钟演示脚本见 [docs/demo.md](docs/demo.md)。调研依据与竞品比较见 [mooncake-ecosystem-analysis.md](mooncake-ecosystem-analysis.md)、[github-ecosystem-analysis.md](github-ecosystem-analysis.md) 和 [project-proposal.md](project-proposal.md)。
+测试中另有一个独立参考求值器：它在小图上逐条枚举简单路径并识别循环，与正式求值器的前驱固定点算法分开；测试对照每个状态的真值，并重放所有生成的有限和循环路径。支付、分布式锁和 Agent 审批的可复现场景见 [docs/scenarios.md](docs/scenarios.md)，三分钟演示脚本见 [docs/demo.md](docs/demo.md)。调研依据与竞品比较见 [mooncake-ecosystem-analysis.md](mooncake-ecosystem-analysis.md)、[github-ecosystem-analysis.md](github-ecosystem-analysis.md) 和 [project-proposal.md](project-proposal.md)。
 
 ## 当前边界
 

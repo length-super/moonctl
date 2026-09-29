@@ -1,0 +1,18 @@
+{
+  "initial": 0,
+  "states": [
+    {"id": "proposed", "labels": ["proposed"]},
+    {"id": "review", "labels": ["review"]},
+    {"id": "approved", "labels": ["approved"]},
+    {"id": "executed", "labels": ["executed"]},
+    {"id": "executed_unapproved", "labels": ["executed", "unapproved_execution"]},
+    {"id": "denied", "labels": ["denied"]}
+  ],
+  "edges": [
+    {"from": 0, "to": 1, "action": "request_review"},
+    {"from": 0, "to": 4, "action": "bypass_review"},
+    {"from": 1, "to": 2, "action": "approve"},
+    {"from": 1, "to": 5, "action": "deny"},
+    {"from": 2, "to": 3, "action": "execute"}
+  ]
+}

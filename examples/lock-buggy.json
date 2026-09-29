@@ -1,0 +1,21 @@
+{
+  "initial": 0,
+  "states": [
+    {"id": "free", "labels": ["free"]},
+    {"id": "a_holds", "labels": ["a_holds"]},
+    {"id": "b_holds", "labels": ["b_holds"]},
+    {"id": "both_hold", "labels": ["both_hold"]},
+    {"id": "released", "labels": ["released"]}
+  ],
+  "edges": [
+    {"from": 0, "to": 1, "action": "a_acquire"},
+    {"from": 0, "to": 2, "action": "b_acquire"},
+    {"from": 1, "to": 3, "action": "b_acquire_without_guard"},
+    {"from": 2, "to": 3, "action": "a_acquire_without_guard"},
+    {"from": 1, "to": 4, "action": "a_release"},
+    {"from": 2, "to": 4, "action": "b_release"},
+    {"from": 3, "to": 4, "action": "cleanup"},
+    {"from": 4, "to": 0, "action": "next_round"},
+    {"from": 1, "to": 1, "action": "a_stall"}
+  ]
+}

@@ -1,0 +1,4 @@
+# No tool execution bypasses approval
+AG !unapproved_execution
+# Every proposal eventually receives a decision
+AF (approved | denied)

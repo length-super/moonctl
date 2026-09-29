@@ -1,0 +1,20 @@
+name = "yelfs/moonctl"
+
+version = "0.1.0"
+
+readme = "README.mbt.md"
+
+repository = ""
+
+license = "Apache-2.0"
+
+keywords = [ "model-checking", "ctl", "formal-verification" ]
+
+preferred_target = "wasm"
+
+description = "Finite-state CTL model checking with replayable witnesses and counterexamples"
+
+import {
+  "moonbitlang/async@0.21.3",
+  "moonbitlang/x@0.5.5",
+}

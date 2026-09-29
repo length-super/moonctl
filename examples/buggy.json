@@ -1,0 +1,16 @@
+{
+  "initial": 0,
+  "states": [
+    {"id": "new", "labels": ["safe"]},
+    {"id": "charged_once", "labels": ["safe"]},
+    {"id": "charged_twice", "labels": ["double_charge"]},
+    {"id": "completed", "labels": ["completed", "safe"]}
+  ],
+  "edges": [
+    {"from": 0, "to": 1, "action": "charge"},
+    {"from": 1, "to": 2, "action": "retry_without_idempotency"},
+    {"from": 1, "to": 3, "action": "confirm"},
+    {"from": 2, "to": 3, "action": "confirm"},
+    {"from": 2, "to": 2, "action": "retry_forever"}
+  ]
+}

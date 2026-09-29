@@ -1,0 +1,13 @@
+{
+  "initial": 0,
+  "states": [
+    {"id": "new", "labels": ["safe"]},
+    {"id": "charged_once", "labels": ["safe"]},
+    {"id": "completed", "labels": ["completed", "safe"]}
+  ],
+  "edges": [
+    {"from": 0, "to": 1, "action": "charge"},
+    {"from": 1, "to": 2, "action": "idempotent_retry"},
+    {"from": 1, "to": 2, "action": "confirm"}
+  ]
+}

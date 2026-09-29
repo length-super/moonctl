@@ -1,0 +1,107 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "yelfs/moonctl"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn check(Model, Formula) -> Report
+
+pub fn load_model_json(String) -> Model raise ModelJsonError
+
+pub fn parse(String) -> Formula raise ParseError
+
+// Errors
+pub(all) suberror ModelJsonError {
+  InvalidJson
+  MissingField(String)
+  WrongType(String)
+  InvalidGraph(ModelError)
+} derive(@debug.Debug)
+pub fn ModelJsonError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror ParseError {
+  UnexpectedEnd
+  UnexpectedToken(String)
+  ExpectedToken(String)
+  InvalidCharacter(Char)
+} derive(@debug.Debug)
+pub fn ParseError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct Edge {
+  from : Int
+  to : Int
+  action : String
+} derive(@debug.Debug)
+pub fn Edge::to_repr(Self) -> @debug.Repr
+
+pub enum Formula {
+  True
+  False
+  Atom(String)
+  Not(Formula)
+  And(Formula, Formula)
+  Or(Formula, Formula)
+  EX(Formula)
+  AX(Formula)
+  EF(Formula)
+  AF(Formula)
+  EG(Formula)
+  AG(Formula)
+  EU(Formula, Formula)
+  AU(Formula, Formula)
+} derive(@debug.Debug)
+pub fn Formula::to_repr(Self) -> @debug.Repr
+
+pub struct Model {
+  states : Array[State]
+  outgoing : Array[Array[Edge]]
+  initial : Int
+}
+pub fn Model::has_label(Self, Int, String) -> Bool
+pub fn Model::initial(Self) -> Int
+pub fn Model::new(Array[State], Array[Edge], initial~ : Int) -> Result[Self, ModelError]
+pub fn Model::state_count(Self) -> Int
+pub fn Model::state_id(Self, Int) -> String?
+pub fn Model::successors(Self, Int) -> Array[Edge]
+
+pub(all) enum ModelError {
+  EmptyStates
+  InvalidInitial(Int)
+  DuplicateState(String)
+  InvalidEdge(Int, Int)
+} derive(@debug.Debug)
+pub fn ModelError::to_repr(Self) -> @debug.Repr
+
+pub struct Report {
+  holds : Bool
+  state_count : Int
+  satisfying_count : Int
+  trace : Array[TraceStep]
+  trace_role : String
+  loop_start : Int?
+}
+pub fn Report::holds(Self) -> Bool
+pub fn Report::loop_start(Self) -> Int?
+pub fn Report::satisfying_count(Self) -> Int
+pub fn Report::state_count(Self) -> Int
+pub fn Report::trace(Self) -> Array[TraceStep]
+pub fn Report::trace_role(Self) -> String
+
+pub(all) struct State {
+  id : String
+  labels : Array[String]
+} derive(@debug.Debug)
+pub fn State::to_repr(Self) -> @debug.Repr
+
+pub(all) struct TraceStep {
+  state : String
+  via : String?
+} derive(@debug.Debug)
+pub fn TraceStep::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

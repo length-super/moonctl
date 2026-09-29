@@ -14,6 +14,7 @@ pub struct Report {
   holds : Bool
   state_count : Int
   satisfying_count : Int
+  satisfying : Array[Bool]
   trace : Array[TraceStep]
   trace_role : String
   loop_start : Int?
@@ -35,9 +36,17 @@ pub fn Report::satisfying_count(self : Report) -> Int {
 }
 
 ///|
+/// Whether a state satisfies the formula. Indices follow the input model's
+/// state order; out-of-range indices return None.
+pub fn Report::satisfies_at(self : Report, index : Int) -> Bool? {
+  self.satisfying.get(index)
+}
+
+///|
 /// Returns a defensive copy of the witness/counterexample available for the
-/// top-level formula. Empty means no path is exposed. AG/EF paths are shortest;
-/// AF/EG paths end with a repeated state, identified by `loop_start`.
+/// top-level formula. Empty means no path is exposed. Finite paths are
+/// shortest under their formula constraints; looping paths end with a repeated
+/// state identified by `loop_start`.
 pub fn Report::trace(self : Report) -> Array[TraceStep] {
   self.trace.copy()
 }
@@ -56,11 +65,7 @@ pub fn Report::loop_start(self : Report) -> Int? {
 
 ///|
 fn exists_next(model : Model, set : Array[Bool], state : Int) -> Bool {
-  let edges = model.outgoing[state]
-  if edges.is_empty() {
-    return set[state]
-  }
-  for edge in edges {
+  for edge in model.outgoing[state] {
     if set[edge.to] {
       return true
     }
@@ -70,11 +75,7 @@ fn exists_next(model : Model, set : Array[Bool], state : Int) -> Bool {
 
 ///|
 fn all_next(model : Model, set : Array[Bool], state : Int) -> Bool {
-  let edges = model.outgoing[state]
-  if edges.is_empty() {
-    return set[state]
-  }
-  for edge in edges {
+  for edge in model.outgoing[state] {
     if !set[edge.to] {
       return false
     }
@@ -138,7 +139,8 @@ fn evaluate(model : Model, formula : Formula) -> Array[Bool] {
 }
 
 ///|
-/// Least fixed point for F and U. `condition` is None for F.
+/// Least fixed point for F and U. Each newly satisfying state notifies its
+/// predecessors once per incoming edge. `condition` is None for F.
 fn least_fixpoint(
   model : Model,
   terminal : Array[Bool],
@@ -146,25 +148,36 @@ fn least_fixpoint(
   existential : Bool,
 ) -> Array[Bool] {
   let result = terminal.copy()
-  let mut changed = true
-  while changed {
-    changed = false
-    for i in 0..<result.length() {
-      if result[i] {
+  let queue : Array[Int] = []
+  let pending = Array::makei(result.length(), i => model.outgoing[i].length())
+  for i in 0..<result.length() {
+    if result[i] {
+      queue.push(i)
+    }
+  }
+  let mut head = 0
+  while head < queue.length() {
+    let current = queue[head]
+    head += 1
+    for predecessor in model.incoming[current] {
+      if result[predecessor] {
         continue
       }
       let allowed = match condition {
-        Some(c) => c[i]
+        Some(c) => c[predecessor]
         None => true
       }
-      if allowed &&
-        (if existential {
-          exists_next(model, result, i)
-        } else {
-          all_next(model, result, i)
-        }) {
-        result[i] = true
-        changed = true
+      if existential {
+        if allowed {
+          result[predecessor] = true
+          queue.push(predecessor)
+        }
+      } else {
+        pending[predecessor] -= 1
+        if allowed && pending[predecessor] == 0 {
+          result[predecessor] = true
+          queue.push(predecessor)
+        }
       }
     }
   }
@@ -172,25 +185,61 @@ fn least_fixpoint(
 }
 
 ///|
-/// Greatest fixed point for G.
+/// Greatest fixed point for G. Removing a state only revisits predecessors
+/// whose path condition might now fail.
 fn greatest_fixpoint(
   model : Model,
   condition : Array[Bool],
   existential : Bool,
 ) -> Array[Bool] {
   let result = condition.copy()
-  let mut changed = true
-  while changed {
-    changed = false
+  let queue : Array[Int] = []
+  if existential {
+    let live = Array::make(result.length(), 0)
     for i in 0..<result.length() {
-      if result[i] &&
-        !(if existential {
-          exists_next(model, result, i)
-        } else {
-          all_next(model, result, i)
-        }) {
-        result[i] = false
-        changed = true
+      if result[i] {
+        for edge in model.outgoing[i] {
+          if result[edge.to] {
+            live[i] += 1
+          }
+        }
+        if live[i] == 0 {
+          queue.push(i)
+        }
+      }
+    }
+    let mut head = 0
+    while head < queue.length() {
+      let current = queue[head]
+      head += 1
+      if !result[current] {
+        continue
+      }
+      result[current] = false
+      for predecessor in model.incoming[current] {
+        if result[predecessor] {
+          live[predecessor] -= 1
+          if live[predecessor] == 0 {
+            queue.push(predecessor)
+          }
+        }
+      }
+    }
+  } else {
+    for i in 0..<result.length() {
+      if !result[i] {
+        queue.push(i)
+      }
+    }
+    let mut head = 0
+    while head < queue.length() {
+      let current = queue[head]
+      head += 1
+      for predecessor in model.incoming[current] {
+        if result[predecessor] {
+          result[predecessor] = false
+          queue.push(predecessor)
+        }
       }
     }
   }
@@ -198,8 +247,14 @@ fn greatest_fixpoint(
 }
 
 ///|
-/// BFS returns a shortest path; edge declaration order breaks equal-length ties.
-fn shortest_path(model : Model, target : Array[Bool]) -> Array[TraceStep] {
+/// BFS returns a shortest path; edge declaration order breaks equal-length
+/// ties. When `allowed` is supplied, only allowed states may be traversed
+/// before reaching a target state.
+fn shortest_path(
+  model : Model,
+  target : Array[Bool],
+  allowed : Array[Bool]?,
+) -> Array[TraceStep] {
   let n = model.states.length()
   let seen = Array::make(n, false)
   let parent = Array::make(n, -1)
@@ -214,6 +269,9 @@ fn shortest_path(model : Model, target : Array[Bool]) -> Array[TraceStep] {
     if target[current] {
       found = current
       break
+    }
+    if allowed is Some(set) && !set[current] {
+      continue
     }
     for edge in model.outgoing[current] {
       if !seen[edge.to] {
@@ -243,9 +301,24 @@ fn shortest_path(model : Model, target : Array[Bool]) -> Array[TraceStep] {
 }
 
 ///|
-/// Construct an ultimately periodic path that stays in `allowed`. For AF
+/// An EX witness or AX counterexample needs exactly one transition. Dead-end
+/// states use the same implicit self-loop as the CTL evaluator.
+fn one_step_path(model : Model, target : Array[Bool]) -> Array[TraceStep] {
+  for edge in model.successors(model.initial) {
+    if target[edge.to] {
+      return [
+        { state: model.states[model.initial].id, via: None, },
+        { state: model.states[edge.to].id, via: Some(edge.action), },
+      ]
+    }
+  }
+  []
+}
+
+///|
+/// Construct an ultimately periodic path that stays in `allowed`. For AF/AU
 /// failures or EG successes, fixed-point semantics guarantees a successor in
-/// that set. An implicit self-loop handles a dead-end state.
+/// that set. A dead-end state has a self-loop in the normalized graph.
 fn lasso_path(model : Model, allowed : Array[Bool]) -> (Array[TraceStep], Int) {
   let seen = Array::make(model.states.length(), -1)
   let path : Array[TraceStep] = []
@@ -279,7 +352,9 @@ fn lasso_path(model : Model, allowed : Array[Bool]) -> (Array[TraceStep], Int) {
 
 ///|
 /// Evaluate a CTL formula at the model's initial state.
-/// For top-level `AG` failures and `EF` successes, includes a shortest path.
+/// Includes paths for top-level EX/AX/EF/AF/EG/AG/EU/AU when one path can
+/// witness the result. Universal until failure may be a finite violation or
+/// an infinite loop avoiding the goal.
 pub fn check(model : Model, formula : Formula) -> Report {
   let result = evaluate(model, formula)
   let holds = result[model.initial]
@@ -290,13 +365,21 @@ pub fn check(model : Model, formula : Formula) -> Report {
     }
   }
   let (trace, trace_role, loop_start) = match formula {
+    EX(inner) if holds => {
+      let next = evaluate(model, inner)
+      (one_step_path(model, next), "witness", None)
+    }
+    AX(inner) if !holds => {
+      let next = evaluate(model, inner)
+      (one_step_path(model, next.map(v => !v)), "counterexample", None)
+    }
     AG(inner) if !holds => {
       let safe = evaluate(model, inner)
-      (shortest_path(model, safe.map(v => !v)), "counterexample", None)
+      (shortest_path(model, safe.map(v => !v), None), "counterexample", None)
     }
     EF(inner) if holds => {
       let goal = evaluate(model, inner)
-      (shortest_path(model, goal), "witness", None)
+      (shortest_path(model, goal, None), "witness", None)
     }
     AF(_) if !holds => {
       let (path, loop_start) = lasso_path(model, result.map(v => !v))
@@ -306,12 +389,33 @@ pub fn check(model : Model, formula : Formula) -> Report {
       let (path, loop_start) = lasso_path(model, result)
       (path, "witness", Some(loop_start))
     }
+    EU(left, right) if holds => {
+      let before = evaluate(model, left)
+      let goal = evaluate(model, right)
+      (shortest_path(model, goal, Some(before)), "witness", None)
+    }
+    AU(left, right) if !holds => {
+      let before = evaluate(model, left)
+      let goal = evaluate(model, right)
+      let bad = result.map(v => !v)
+      let violation = Array::makei(model.states.length(), i => {
+        !before[i] && !goal[i]
+      })
+      let finite = shortest_path(model, violation, Some(bad))
+      if finite.length() > 0 {
+        (finite, "counterexample", None)
+      } else {
+        let (path, loop_start) = lasso_path(model, bad)
+        (path, "counterexample", Some(loop_start))
+      }
+    }
     _ => ([], "none", None)
   }
   {
     holds,
     state_count: model.states.length(),
     satisfying_count,
+    satisfying: result,
     trace,
     trace_role,
     loop_start,

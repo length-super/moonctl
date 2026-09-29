@@ -23,14 +23,22 @@ counterexample (shortest path):
   --retry_without_idempotency--> charged_twice
 ```
 
-失败时退出码为 1。修复后的工作流可运行：
+性质失败时退出码为 1。修复后的工作流可运行：
 
 ```sh
 moon run --target native cmd/main -- examples/fixed.json 'AG !double_charge'
 moon run --target native cmd/main -- examples/fixed.json 'AF completed'
 ```
 
-两条性质都应得到 `PASS`。模型或公式输入错误时退出码为 2。
+两条性质都应得到 `PASS`。独立可执行文件对模型或公式输入错误返回 2；`moon run` 是开发包装命令，可能把非零退出码统一报告为 1。
+
+机器可读输出使用 `--json`：
+
+```sh
+moon run --target native cmd/main -- --json examples/buggy.json 'AF completed'
+```
+
+输出是单个 JSON 对象：`formula` 为输入公式，`report` 含 `schema_version`、`holds`、`state_count`、`satisfying_count`、`satisfying_states`、`trace_role`、`trace` 和 `loop_start`。`satisfying_states[i]` 对应输入模型第 `i` 个状态；循环路径的最后一步重访 `loop_start` 指向的步骤。输入错误时 JSON 模式输出 `{"error":"..."}`。
 
 ## 作为库使用
 
@@ -53,7 +61,7 @@ let report = @moonctl.check(model, property)
 assert_true(report.holds())
 ```
 
-在调用方 `moon.pkg` 中导入 `"yelfs/moonctl" @moonctl`。`Model::new` 验证非空状态、初始索引、状态 ID 唯一性和转移索引。`parse` 与 `load_model_json` 分别以 `ParseError` 和 `ModelJsonError` 报告输入问题。`Report` 提供 `holds()`、`state_count()`、`satisfying_count()`、`trace()`、`trace_role()` 和 `loop_start()`。
+在调用方 `moon.pkg` 中导入 `"yelfs/moonctl" @moonctl`。`Model::new` 验证非空状态、初始索引、状态 ID 唯一性和转移索引。`parse` 与 `load_model_json` 分别以 `ParseError` 和 `ModelJsonError` 报告输入问题。`Report` 提供 `holds()`、`state_count()`、`satisfying_count()`、`satisfies_at(index)`、`trace()`、`trace_role()`、`loop_start()` 和 `to_json()`。
 
 ## JSON 模型格式
 
@@ -89,7 +97,7 @@ assert_true(report.holds())
 
 求值采用有限图固定点算法，`holds()` 只报告**初始状态**的真值。`satisfying_count()` 是全图中满足该公式的状态数，可能包括初始状态不可达的状态。
 
-对顶层 `AG p` 的失败或 `EF p` 的成功，`trace()` 返回从初始状态出发的最短有限反例或见证。对顶层 `AF p` 的失败或 `EG p` 的成功，返回一条最终重复状态的路径；`loop_start()` 指向第一次出现的循环入口，末尾步骤是重访该状态。其他公式的 `trace()` 暂为空；这不影响真假判定。循环路径保证有效，但未优化为最短。
+对顶层 `EX p`、`EF p`、`E[p U q]` 的成功，以及 `AX p`、`AG p` 的失败，`trace()` 返回最短有限见证或反例。`A[p U q]` 失败时优先返回最短的有限违反路径；若失败只能由无限等待造成，则返回一条循环路径。`AF p` 的失败和 `EG p` 的成功也返回循环路径；`loop_start()` 指向第一次出现的循环入口，末尾步骤是重访该状态。其他结果的 `trace()` 暂为空；这不影响真假判定。循环路径保证有效，但未优化为最短。
 
 ## 验证与演示
 
@@ -103,7 +111,7 @@ moon test --target native --deny-warn
 
 ## 当前边界
 
-- 使用显式有限图，时间和内存随图与公式增长；MVP 尚无符号状态压缩或状态规模上限。
+- 使用显式有限图，单个时序子公式的固定点求值按状态和转移数线性增长；MVP 尚无符号状态压缩或状态规模上限。
 - 模型是否忠实于业务系统由建模者负责；`PASS` 只适用于已给出的图与标签。
 - CLI 使用 native 后端；核心库已按 MoonBit 的 wasm、wasm-gc、js、native 目标检查。
 

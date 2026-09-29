@@ -1,35 +1,49 @@
 ///|
-/// Usage: moon run --target native cmd/main -- <graph.json> '<CTL formula>'
+/// Usage: moon run --target native cmd/main -- [--json] <graph.json> '<CTL formula>'
 async fn main {
   let args = @env.args()
-  if args.length() != 3 {
-    println("usage: moonctl <graph.json> '<CTL formula>'")
+  let json_mode = args.length() == 4 && args[1] == "--json"
+  if !(args.length() == 3 && args[1] != "--json") && !json_mode {
+    println("usage: moonctl [--json] <graph.json> '<CTL formula>'")
     @sys.exit(2)
     return
   }
-  let (path, formula_text) = (args[1], args[2])
+  let path = if json_mode { args[2] } else { args[1] }
+  let formula_text = if json_mode { args[3] } else { args[2] }
   let data = @fs.read_file(path).text() catch {
     error => {
-      println("cannot read graph: \{error}")
+      emit_error("cannot read graph: \{error}", json_mode)
       @sys.exit(2)
       return
     }
   }
   let model = @moonctl.load_model_json(data) catch {
     error => {
-      println("invalid graph: \{Repr(error)}")
+      emit_error("invalid graph: \{Repr(error)}", json_mode)
       @sys.exit(2)
       return
     }
   }
   let formula = @moonctl.parse(formula_text) catch {
     error => {
-      println("invalid CTL formula: \{Repr(error)}")
+      emit_error("invalid CTL formula: \{Repr(error)}", json_mode)
       @sys.exit(2)
       return
     }
   }
   let report = @moonctl.check(model, formula)
+  if json_mode {
+    println(
+      Json::object({
+        "formula": Json::string(formula_text),
+        "report": report.to_json(),
+      }).stringify(),
+    )
+    if !report.holds() {
+      @sys.exit(1)
+    }
+    return
+  }
   let verdict = if report.holds() { "PASS" } else { "FAIL" }
   println("\{verdict}: \{formula_text}")
   println(
@@ -55,5 +69,14 @@ async fn main {
   }
   if !report.holds() {
     @sys.exit(1)
+  }
+}
+
+///|
+fn emit_error(message : String, json_mode : Bool) -> Unit {
+  if json_mode {
+    println(Json::object({ "error": Json::string(message) }).stringify())
+  } else {
+    println(message)
   }
 }

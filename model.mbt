@@ -36,6 +36,7 @@ pub extend ModelError with Debug::{to_repr}
 pub struct Model {
   states : Array[State]
   outgoing : Array[Array[Edge]]
+  incoming : Array[Array[Int]]
   initial : Int
 }
 
@@ -52,12 +53,12 @@ pub fn Model::new(
   if initial < 0 || initial >= count {
     return Err(InvalidInitial(initial))
   }
-  for i in 0..<count {
-    for j in 0..<i {
-      if states[i].id == states[j].id {
-        return Err(DuplicateState(states[i].id))
-      }
+  let ids : Map[String, Bool] = Map([])
+  for state in states {
+    if ids.contains(state.id) {
+      return Err(DuplicateState(state.id))
     }
+    ids[state.id] = true
   }
   let outgoing = Array::makei(count, _ => Array())
   for edge in edges {
@@ -66,11 +67,22 @@ pub fn Model::new(
     }
     outgoing[edge.from].push(edge)
   }
+  for i in 0..<count {
+    if outgoing[i].is_empty() {
+      outgoing[i].push({ from: i, to: i, action: "<stutter>", })
+    }
+  }
+  let incoming = Array::makei(count, _ => Array())
+  for i in 0..<count {
+    for edge in outgoing[i] {
+      incoming[edge.to].push(i)
+    }
+  }
   let owned_states = states.map(s => State::{
     id: s.id,
     labels: s.labels.copy(),
   })
-  Ok({ states: owned_states, outgoing, initial, })
+  Ok({ states: owned_states, outgoing, incoming, initial, })
 }
 
 ///|
@@ -99,9 +111,7 @@ pub fn Model::has_label(self : Model, index : Int, label : String) -> Bool {
 ///|
 pub fn Model::successors(self : Model, index : Int) -> Array[Edge] {
   match self.outgoing.get(index) {
-    Some(edges) if !edges.is_empty() => edges.copy()
-    Some(_) if index >= 0 && index < self.states.length() =>
-      [{ from: index, to: index, action: "<stutter>", }]
+    Some(edges) => edges.copy()
     _ => []
   }
 }

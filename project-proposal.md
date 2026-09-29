@@ -61,11 +61,12 @@ flowchart LR
 
 ### Modules
 
-- `model.mbt`：状态、转换、标签、初态与索引校验；死端按隐式自环解释。模型行为的完整性由建模者保证。
+- `model.mbt`：状态、转换、标签、初态与索引校验；构造时补齐死端自环和前驱索引。模型行为的完整性由建模者保证。
 - `formula.mbt`：CTL AST、文本解析和运算符优先级。
-- `check.mbt`：布尔状态集固定点求值与结果分类；`AG/EF` 提取最短有限路径，`AF/EG` 提取循环路径。
+- `check.mbt`：利用前驱索引传播布尔状态集固定点；为 `EX/AX/EF/AF/EG/AG/EU/AU` 的可解释结果提取有限或循环路径。
+- `report_json.mbt`：稳定版本号的 JSON 报告，供 CI 和其他工具读取。
 - `json_model.mbt`：小型 JSON 图的类型校验与装载。
-- `cmd/main/`：读取图与公式，输出人可读报告；CLI 是 native 包装层，核心库可用于 wasm/js/native。
+- `cmd/main/`：读取图与公式，输出人可读或 JSON 报告；CLI 是 native 包装层，核心库可用于 wasm/js/native。
 - `examples/`：有竞争条件的扣款工作流与修复版。
 
 ### Data Flow
@@ -78,7 +79,7 @@ flowchart LR
 let model = @moonctl.Model::new(states, edges, initial=0)
 let formula = @moonctl.parse("AG !double_charge")
 let report = @moonctl.check(model, formula)
-// report.holds(), report.trace(), report.loop_start()
+// report.holds(), report.satisfies_at(0), report.trace(), report.to_json()
 ```
 
 模块名为 `yelfs/moonctl`，核心 API 在根包。解析失败与无效图有显式错误类型。图是否覆盖实际系统的全部相关行为无法自动验证；当前版本也尚未设置状态规模上限。

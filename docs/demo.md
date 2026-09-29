@@ -31,3 +31,5 @@ moon test --target native --deny-warn
 ```
 
 两条性质都变为 `PASS`。强调模型是明确列出的有限状态图，结果针对该图成立；MoonCTL 可作为库嵌入新的工作流或协议模型。
+
+如果还有 10 秒，可展示 `--json` 输出中的 `satisfying_states` 与 `trace`，说明同一检查结果可直接交给 CI 或可视化工具处理。

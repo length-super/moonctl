@@ -58,6 +58,7 @@ pub fn Formula::to_repr(Self) -> @debug.Repr
 pub struct Model {
   states : Array[State]
   outgoing : Array[Array[Edge]]
+  incoming : Array[Array[Int]]
   initial : Int
 }
 pub fn Model::has_label(Self, Int, String) -> Bool
@@ -79,14 +80,17 @@ pub struct Report {
   holds : Bool
   state_count : Int
   satisfying_count : Int
+  satisfying : Array[Bool]
   trace : Array[TraceStep]
   trace_role : String
   loop_start : Int?
 }
 pub fn Report::holds(Self) -> Bool
 pub fn Report::loop_start(Self) -> Int?
+pub fn Report::satisfies_at(Self, Int) -> Bool?
 pub fn Report::satisfying_count(Self) -> Int
 pub fn Report::state_count(Self) -> Int
+pub fn Report::to_json(Self) -> Json
 pub fn Report::trace(Self) -> Array[TraceStep]
 pub fn Report::trace_role(Self) -> String
 

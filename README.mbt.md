@@ -85,7 +85,7 @@ let report = @moonctl.check(model, property)
 assert_true(report.holds())
 ```
 
-在调用方 `moon.pkg` 中导入 `"length-super/moonctl" @moonctl`。发布后可用 `moon add length-super/moonctl` 添加依赖。`Model::new` 验证非空状态、初始索引、状态 ID 唯一性和转移索引。`parse` 与 `load_model_json` 分别以 `ParseError` 和 `ModelJsonError` 报告输入问题。`Report` 提供 `holds()`、`state_count()`、`satisfying_count()`、`satisfies_at(index)`、`trace()`、`trace_role()`、`loop_start()` 和 `to_json()`。
+在调用方 `moon.pkg` 中导入 `"length-super/moonctl" @moonctl`。可用 `moon add length-super/moonctl` 添加依赖。`Model::new` 验证非空状态、初始索引、状态 ID 唯一性和转移索引。`parse` 与 `load_model_json` 分别以 `ParseError` 和 `ModelJsonError` 报告输入问题。`Report` 提供 `holds()`、`state_count()`、`satisfying_count()`、`satisfies_at(index)`、`trace()`、`trace_role()`、`loop_start()` 和 `to_json()`。
 
 ### 用状态 ID 构图
 

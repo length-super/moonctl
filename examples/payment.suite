@@ -1,0 +1,4 @@
+# Safety and liveness of the payment workflow
+AG !double_charge
+AF completed
+EF completed

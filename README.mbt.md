@@ -39,6 +39,14 @@ moon run --target native cmd/main -- examples/fixed.json 'AF completed'
 
 两条性质都应得到 `PASS`。独立可执行文件对模型或公式输入错误返回 2；`moon run` 是开发包装命令，可能把非零退出码统一报告为 1。
 
+多个性质可以写入一份套件文件，每行一个 CTL 公式，空行和 `#` 注释会被忽略：
+
+```sh
+moon run --target native cmd/main -- --suite examples/buggy.json examples/payment.suite
+```
+
+命令会逐项输出 `PASS` / `FAIL` 和汇总；全部通过时退出码为 0，任一性质失败时为 1，文件或公式错误时为 2。
+
 机器可读输出使用 `--json`：
 
 ```sh

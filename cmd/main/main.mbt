@@ -1,15 +1,19 @@
 ///|
 /// Usage: moon run --target native cmd/main -- [--json] <graph.json> '<CTL formula>'
+///    or: moon run --target native cmd/main -- --suite <graph.json> <suite.txt>
 async fn main {
   let args = @env.args()
   let json_mode = args.length() == 4 && args[1] == "--json"
-  if !(args.length() == 3 && args[1] != "--json") && !json_mode {
+  let suite_mode = args.length() == 4 && args[1] == "--suite"
+  if !(args.length() == 3 && args[1] != "--json" && args[1] != "--suite") &&
+    !json_mode &&
+    !suite_mode {
     println("usage: moonctl [--json] <graph.json> '<CTL formula>'")
+    println("   or: moonctl --suite <graph.json> <suite.txt>")
     @sys.exit(2)
     return
   }
-  let path = if json_mode { args[2] } else { args[1] }
-  let formula_text = if json_mode { args[3] } else { args[2] }
+  let path = if json_mode || suite_mode { args[2] } else { args[1] }
   let data = @fs.read_file(path).text() catch {
     error => {
       emit_error("cannot read graph: \{error}", json_mode)
@@ -24,6 +28,21 @@ async fn main {
       return
     }
   }
+  if suite_mode {
+    let suite = @fs.read_file(args[3]).text() catch {
+      error => {
+        println("cannot read suite: \{error}")
+        @sys.exit(2)
+        return
+      }
+    }
+    let status = run_suite(model, suite)
+    if status != 0 {
+      @sys.exit(status)
+    }
+    return
+  }
+  let formula_text = if json_mode { args[3] } else { args[2] }
   let formula = @moonctl.parse(formula_text) catch {
     error => {
       emit_error("invalid CTL formula: \{Repr(error)}", json_mode)

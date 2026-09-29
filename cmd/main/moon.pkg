@@ -1,5 +1,5 @@
 import {
-  "yelfs/moonctl",
+  "length-super/moonctl",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/env",

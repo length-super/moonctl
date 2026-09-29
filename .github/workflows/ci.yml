@@ -18,6 +18,8 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - name: Check all backends
         run: moon check --target all --deny-warn --warn-list +73
+      - name: Build all backends
+        run: moon build --target all
       - name: Test wasm-gc
         run: moon test --target wasm-gc --deny-warn
       - name: Test native

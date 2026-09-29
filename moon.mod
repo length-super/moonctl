@@ -1,4 +1,4 @@
-name = "yelfs/moonctl"
+name = "length-super/moonctl"
 
 version = "0.1.0"
 

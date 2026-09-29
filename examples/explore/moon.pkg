@@ -1,5 +1,5 @@
 import {
-  "yelfs/moonctl",
+  "length-super/moonctl",
 }
 
 pkgtype(kind: "executable")

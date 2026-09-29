@@ -84,7 +84,7 @@ let report = @moonctl.check(model, formula)
 // report.holds(), report.satisfies_at(0), report.trace(), report.to_json()
 ```
 
-模块名为 `yelfs/moonctl`，核心 API 在根包。解析失败与无效图有显式错误类型。图是否覆盖实际系统的全部相关行为仍取决于建模者；按需探索有显式状态与转移预算，手工构图没有内置硬上限。
+模块名为 `length-super/moonctl`，核心 API 在根包。解析失败与无效图有显式错误类型。图是否覆盖实际系统的全部相关行为仍取决于建模者；按需探索有显式状态与转移预算，手工构图没有内置硬上限。
 
 ## 6. MVP 范围
 

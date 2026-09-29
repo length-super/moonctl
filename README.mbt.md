@@ -4,9 +4,16 @@ MoonCTL 是一个用 MoonBit 编写的 CTL（计算树逻辑）有限状态模�
 
 它适合检查工作流、协议、工具调用及其他可枚举状态系统。它检查**你提供的模型**，不会从任意 MoonBit 程序自动提取状态图。
 
+| 能力 | 说明 |
+| --- | --- |
+| CTL 检查 | 支持 `EX`、`AX`、`EF`、`AF`、`EG`、`AG`、`E[p U q]`、`A[p U q]` |
+| 结果解释 | 对支持的公式返回有限路径或带循环入口的路径；也可输出 JSON |
+| 建模方式 | 从 JSON、状态 ID 与转移，或带预算的转换函数构建有限图 |
+| 运行目标 | 核心库通过 wasm、wasm-gc、js、native 检查；命令行示例使用 native |
+
 ## 快速体验
 
-需要 MoonBit 工具链。进入本仓库根目录后运行：
+需要 MoonBit 工具链。克隆仓库并进入根目录后运行：
 
 ```sh
 moon run --target native cmd/main -- examples/buggy.json 'AG !double_charge'
@@ -42,7 +49,7 @@ moon run --target native cmd/main -- --json examples/buggy.json 'AF completed'
 
 ## 作为库使用
 
-本模块名为 `yelfs/moonctl`。使用 API 可直接构造状态和转移，无需 JSON：
+本模块名为 `length-super/moonctl`。使用 API 可直接构造状态和转移，无需 JSON：
 
 ```mbt nocheck
 let states : Array[@moonctl.State] = [
@@ -61,7 +68,7 @@ let report = @moonctl.check(model, property)
 assert_true(report.holds())
 ```
 
-在调用方 `moon.pkg` 中导入 `"yelfs/moonctl" @moonctl`。`Model::new` 验证非空状态、初始索引、状态 ID 唯一性和转移索引。`parse` 与 `load_model_json` 分别以 `ParseError` 和 `ModelJsonError` 报告输入问题。`Report` 提供 `holds()`、`state_count()`、`satisfying_count()`、`satisfies_at(index)`、`trace()`、`trace_role()`、`loop_start()` 和 `to_json()`。
+在调用方 `moon.pkg` 中导入 `"length-super/moonctl" @moonctl`。发布后可用 `moon add length-super/moonctl` 添加依赖。`Model::new` 验证非空状态、初始索引、状态 ID 唯一性和转移索引。`parse` 与 `load_model_json` 分别以 `ParseError` 和 `ModelJsonError` 报告输入问题。`Report` 提供 `holds()`、`state_count()`、`satisfying_count()`、`satisfies_at(index)`、`trace()`、`trace_role()`、`loop_start()` 和 `to_json()`。
 
 ### 用状态 ID 构图
 
@@ -147,6 +154,7 @@ match result {
 
 ```sh
 moon check --target all --deny-warn
+moon build --target all
 moon test --target wasm-gc --deny-warn
 moon test --target native --deny-warn
 moon run --target wasm-gc examples/explore
@@ -160,4 +168,8 @@ moon run --target wasm-gc examples/explore
 - 模型是否忠实于业务系统由建模者负责；`PASS` 只适用于已给出的图与标签。
 - CLI 使用 native 后端；核心库已按 MoonBit 的 wasm、wasm-gc、js、native 目标检查。
 
-Apache-2.0 许可。此仓库当前只在本地开发与验证，尚未发布到 GitHub 或 Mooncakes。
+## 项目与来源
+
+MoonCTL 是独立实现的 CTL 显式状态模型检查库。仓库中的支付流程模型、测试图和演示脚本为本项目编写；生态调研中提及的 MoonBDD、MoonPetri 和 `moon prove` 是相邻项目，并非本项目的代码来源。源码以 [Apache-2.0](LICENSE) 发布。
+
+项目维护者：[length-super](https://github.com/length-super)。反馈问题或提出改进建议时，请附上最小状态图、CTL 公式、实际输出和预期结果。当前公开 API 以 `pkg.generated.mbti` 为准。
